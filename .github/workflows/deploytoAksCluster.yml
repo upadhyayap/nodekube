@@ -1,6 +1,17 @@
-on: [push]
+on:
+  push:
+    branches:
+      - master
+
+env:
+  RESOURCEGROUPNAME: "kubenodespike-rg"
+  LOCATION: "South Central US"
+  HOSTINGPLANNAME: "kubenodespike-plan"
+  APPINSIGHTLOCATION: "South Central US"
+  SKU: "Standard"
+
 jobs:
-  build-and-deploy:
+  build:
     runs-on: ubuntu-latest
     steps:
     
@@ -9,26 +20,36 @@ jobs:
     - uses: azure/login@v1
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
+    
+    # Deploy Arm template
+    - name: create ACR
+      uses: azure/CLI@v1
+      continue-on-error: false
+      with:
+        inlineScript: |
+          az group create --name "${{ env.RESOURCEGROUPNAME }}" --location "${{ env.LOCATION }}"
+          az deployment group create --resource-group "${{ env.RESOURCEGROUPNAME }}" --template-file ./ArmTemplates/containerRegistry-template.json --parameters registryName="kubenodespike" registryLocation="${{ env.APPINSIGHTLOCATION }}" registrySku="${{ env.SKU }}"
+    
+    
 
-    - name: Create ACR
+    - name: ACR credentials
       id: create-acr
       run: |
-        az acr create -n nodkubeacr -g nodkubeacr82b2-rg --location "East US" --sku Standard --admin-enabled
         echo "::set-output name=acr_username::`az acr credential show -n nodkubeacr --query username | xargs`"
         echo "::set-output name=acr_password::`az acr credential show -n nodkubeacr --query passwords[0].value | xargs`"
         echo "::add-mask::`az acr credential show -n nodkubeacr --query passwords[0].value | xargs`"
 
     - uses: azure/docker-login@v1
       with:
-        login-server: nodkubeacr.azurecr.io
+        login-server: kubenodespike.azurecr.io
         username: ${{ steps.create-acr.outputs.acr_username }}
         password: ${{ steps.create-acr.outputs.acr_password }}
 
     - name: Build and push image to ACR
       id: build-image
       run: |
-        docker build "$GITHUB_WORKSPACE/Application" -f  "Application/Dockerfile" -t nodkubeacr.azurecr.io/aksnettagtest1:${{ github.sha }}
-        docker push nodkubeacr.azurecr.io/aksnettagtest1:${{ github.sha }}
+        docker build "$GITHUB_WORKSPACE/Application" -f  "Application/Dockerfile" -t kubenodespike.azurecr.io/kubenodespike:${{ github.sha }}
+        docker push kubenodespike.azurecr.io/kubenodespike:${{ github.sha }}
     
     - uses: azure/k8s-set-context@v1
       id: login
