@@ -8,7 +8,7 @@ env:
   LOCATION: "South Central US"
   HOSTINGPLANNAME: "kubenodespike-plan"
   APPINSIGHTLOCATION: "South Central US"
-  SKU: "Standard"
+  SKU: "Standard" 
 
 jobs:
   build:
