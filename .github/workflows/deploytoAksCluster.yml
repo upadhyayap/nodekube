@@ -34,12 +34,14 @@ jobs:
 
     - name: ACR credentials
       id: create-acr
+      continue-on-error: false
       run: |
-        echo "::set-output name=acr_username::`az acr credential show -n nodkubeacr --query username | xargs`"
-        echo "::set-output name=acr_password::`az acr credential show -n nodkubeacr --query passwords[0].value | xargs`"
-        echo "::add-mask::`az acr credential show -n nodkubeacr --query passwords[0].value | xargs`"
+        echo "::set-output name=acr_username::`az acr credential show -n kubenodespike --query username | xargs`"
+        echo "::set-output name=acr_password::`az acr credential show -n kubenodespike --query passwords[0].value | xargs`"
+        echo "::add-mask::`az acr credential show -n kubenodespike --query passwords[0].value | xargs`"
 
     - uses: azure/docker-login@v1
+      continue-on-error: false
       with:
         login-server: kubenodespike.azurecr.io
         username: ${{ steps.create-acr.outputs.acr_username }}
@@ -47,6 +49,7 @@ jobs:
 
     - name: Build and push image to ACR
       id: build-image
+      continue-on-error: false
       run: |
         docker build "$GITHUB_WORKSPACE/Application" -f  "Application/Dockerfile" -t kubenodespike.azurecr.io/kubenodespike:${{ github.sha }}
         docker push kubenodespike.azurecr.io/kubenodespike:${{ github.sha }}
